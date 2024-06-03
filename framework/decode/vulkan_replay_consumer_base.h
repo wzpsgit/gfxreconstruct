@@ -1132,6 +1132,26 @@ class VulkanReplayConsumerBase : public VulkanConsumer
 
     bool CheckCommandBufferInfoForFrameBoundary(const CommandBufferInfo* command_buffer_info);
 
+    void ReplaceWindowedResolution(uint32_t& width, uint32_t& height)
+    {
+        if (options_.force_windowed)
+        {
+            const_cast<VulkanReplayOptions*>(&options_)->origin_width = width;
+            const_cast<VulkanReplayOptions*>(&options_)->origin_height = height;
+            width  = options_.windowed_width;
+            height = options_.windowed_height;            
+        }
+    }
+
+    void ModifyExtentIfSizeMatched(uint32_t& width, uint32_t& height)
+    {
+        if (options_.force_windowed && options_.origin_width == width && options_.origin_height == height)
+        {
+            width = options_.windowed_width;
+            height = options_.windowed_height;
+        }
+    }
+
   private:
     struct HardwareBufferInfo
     {

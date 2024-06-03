@@ -430,6 +430,9 @@ struct FramebufferInfo : public VulkanObjectInfo<VkFramebuffer>
     std::unordered_map<uint32_t, size_t> array_counts;
 
     std::vector<format::HandleId> attachment_image_view_ids;
+
+    bool is_swapchain{ false };
+
 };
 
 struct DeferredOperationKHRInfo : public VulkanObjectInfo<VkDeferredOperationKHR>

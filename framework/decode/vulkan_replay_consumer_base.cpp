@@ -375,6 +375,8 @@ void VulkanReplayConsumerBase::ProcessResizeWindowCommand(format::HandleId surfa
     {
         Window* window = surface_info->window;
 
+        ReplaceWindowedResolution(width, height);
+
         if (window != nullptr)
         {
             window->SetSize(width, height);
@@ -412,6 +414,8 @@ void VulkanReplayConsumerBase::ProcessResizeWindowCommand2(format::HandleId surf
     if (surface_info != nullptr)
     {
         Window* window = surface_info->window;
+
+        ReplaceWindowedResolution(width, height);
 
         if (window != nullptr)
         {
@@ -5039,6 +5043,10 @@ VkResult VulkanReplayConsumerBase::OverrideCreateSwapchainKHR(
         // screen orientation when the swapchain pre-transform specifies a 90 or 270 degree rotation for older files
         // that do not include a ResizeWindowCmd2 command.
         auto meta_info = pCreateInfo->GetMetaStructPointer();
+
+        auto create_info = meta_info->decoded_value;
+        ModifyExtentIfSizeMatched(create_info->imageExtent.width, create_info->imageExtent.height);
+
         if (meta_info != nullptr)
         {
             SetSwapchainWindowSize(meta_info);
@@ -6805,6 +6813,12 @@ void VulkanReplayConsumerBase::OverrideCmdBeginRenderPass(
             command_buffer_info->image_layout_barriers[image_view_info->image_id] =
                 render_pass_info->attachment_description_final_layouts[i];
         }
+
+        if (options_.force_windowed && framebuffer_info->is_swapchain)
+        {
+            auto renderArea = render_pass_begin_info_decoder->GetMetaStructPointer()->renderArea;
+            ModifyExtentIfSizeMatched(renderArea->extent->decoded_value->width, renderArea->extent->decoded_value->height);
+        }
     }
 
     VkCommandBuffer command_buffer = command_buffer_info->handle;
@@ -6846,9 +6860,26 @@ VkResult VulkanReplayConsumerBase::OverrideCreateFramebuffer(
     HandlePointerDecoder<VkFramebuffer>*                   frame_buffer_decoder)
 {
     VkDevice                       device          = device_info->handle;
-    const VkFramebufferCreateInfo* create_info     = create_info_decoder->GetPointer();
+    VkFramebufferCreateInfo* create_info     = create_info_decoder->GetPointer();
     const VkAllocationCallbacks*   allocator       = GetAllocationCallbacks(allocator_decoder);
     VkFramebuffer*                 out_framebuffer = frame_buffer_decoder->GetHandlePointer();
+
+    bool is_swapchain_framebuffer = false;
+    if (create_info->attachmentCount > 0 && create_info->pAttachments != nullptr && options_.force_windowed)
+    {
+        for (uint32_t i = 0; i < create_info->attachmentCount; ++i)
+        {
+            auto image_view_id = create_info_decoder->GetMetaStructPointer()->pAttachments.GetPointer()[i];
+            auto image_view_info = object_info_table_.GetImageViewInfo(image_view_id);
+            auto image_info = object_info_table_.GetImageInfo(image_view_info->image_id);
+            if (image_info->is_swapchain_image)
+            {
+                ModifyExtentIfSizeMatched(create_info->width, create_info->height);
+                is_swapchain_framebuffer = true;
+                break;
+            }
+        }
+    }
 
     VkResult result = func(device, create_info, allocator, out_framebuffer);
 
@@ -6864,6 +6895,8 @@ VkResult VulkanReplayConsumerBase::OverrideCreateFramebuffer(
             framebuffer_info->attachment_image_view_ids.push_back(
                 create_info_decoder->GetMetaStructPointer()->pAttachments.GetPointer()[i]);
         }
+        
+        framebuffer_info->is_swapchain = is_swapchain_framebuffer;
     }
 
     return result;

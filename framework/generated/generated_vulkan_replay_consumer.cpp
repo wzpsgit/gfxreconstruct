@@ -1454,7 +1454,28 @@ void VulkanReplayConsumer::Process_vkCmdSetViewport(
     StructPointerDecoder<Decoded_VkViewport>*   pViewports)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
-    const VkViewport* in_pViewports = pViewports->GetPointer();
+    VkViewport* in_pViewports = pViewports->GetPointer();
+
+    if (options_.force_windowed)
+    {
+        auto commandBuffer_info = GetObjectInfoTable().GetCommandBufferInfo(commandBuffer);
+        for (uint32_t i = 0; i < commandBuffer_info->frame_buffer_ids.size(); ++i)
+        {
+            auto framebuffer_info = GetObjectInfoTable().GetFramebufferInfo(commandBuffer_info->frame_buffer_ids[i]);
+            if (framebuffer_info->is_swapchain)
+            {
+                for (uint32_t j = 0; j < viewportCount; ++j)
+                {
+                    if (in_pViewports[j].width == options_.origin_width && in_pViewports[j].height == options_.origin_height)
+                    {
+                        in_pViewports[j].width = options_.windowed_width;
+                        in_pViewports[j].height = options_.windowed_height;
+                    }
+                }
+                break;
+            }
+        }
+    }    
 
     GetDeviceTable(in_commandBuffer)->CmdSetViewport(in_commandBuffer, firstViewport, viewportCount, in_pViewports);
 }
@@ -1467,7 +1488,29 @@ void VulkanReplayConsumer::Process_vkCmdSetScissor(
     StructPointerDecoder<Decoded_VkRect2D>*     pScissors)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
-    const VkRect2D* in_pScissors = pScissors->GetPointer();
+    VkRect2D* in_pScissors = pScissors->GetPointer();
+
+    if (options_.force_windowed)
+    {
+        auto commandBuffer_info = GetObjectInfoTable().GetCommandBufferInfo(commandBuffer);
+        for (uint32_t i = 0; i < commandBuffer_info->frame_buffer_ids.size(); ++i)
+        {
+            auto framebuffer_info = GetObjectInfoTable().GetFramebufferInfo(commandBuffer_info->frame_buffer_ids[i]);
+            if (framebuffer_info->is_swapchain)
+            {
+                for (uint32_t j = 0; j < scissorCount; ++j)
+                {
+                    if (in_pScissors[j].extent.width == options_.origin_width && in_pScissors[j].extent.height == options_.origin_height)
+                    {
+                        in_pScissors[j].extent.width = options_.windowed_width;
+                        in_pScissors[j].extent.height = options_.windowed_height;
+                    }
+                }
+
+                break;
+            }
+        }
+    }
 
     GetDeviceTable(in_commandBuffer)->CmdSetScissor(in_commandBuffer, firstScissor, scissorCount, in_pScissors);
 }

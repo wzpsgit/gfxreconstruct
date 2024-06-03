@@ -59,6 +59,8 @@ struct VulkanReplayOptions : public ReplayOptions
     uint32_t                     screenshot_width, screenshot_height;
     float                        screenshot_scale;
     std::string                  replace_dir;
+    uint32_t                     origin_width{ 0 };
+    uint32_t                     origin_height{ 0 };
 };
 
 GFXRECON_END_NAMESPACE(decode)
