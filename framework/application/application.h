@@ -64,6 +64,9 @@ class Application final
 
     void Run();
 
+    //per frame run loop_count
+    void Run(uint32_t loop_count, uint32_t max_loops = 100000);
+
     bool GetPaused() const { return paused_; }
 
     void SetPaused(bool paused);

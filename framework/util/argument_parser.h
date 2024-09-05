@@ -53,6 +53,7 @@ class ArgumentParser
     size_t                          GetPositionalArgumentsCount() const { return positional_arguments_present_.size(); }
     const std::vector<std::string>& GetPositionalArguments() const { return positional_arguments_present_; }
 
+    const std::unordered_map<std::string, uint32_t> GetArgumentsIndices() const { return arguments_indices_; }
   private:
     void Init(std::vector<std::string> command_line_args, const std::string& options, const std::string& arguments);
 

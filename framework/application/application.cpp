@@ -28,6 +28,7 @@
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #include "application/win32_context.h"
+#include"Windows.h"
 #endif
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #include "application/wayland_context.h"
@@ -128,7 +129,7 @@ void Application::SetFpsInfo(graphics::FpsInfo* fps_info)
 void Application::Run()
 {
     running_ = true;
-
+    //int current_loop = 1;
     while (running_)
     {
         ProcessEvents(paused_);
@@ -164,8 +165,14 @@ void Application::Run()
             }
 
             // PlaySingleFrame() increments this->current_frame_number_ *if* there's an end-of-frame
-            PlaySingleFrame();
 
+
+            //set the cycle times
+         
+            PlaySingleFrame();
+            //Sleep(5000);
+            //GFXRECON_WRITE_CONSOLE("Play Single Frame Times :%d", current_loop)
+            //current_loop++;
             if (fps_info_ != nullptr)
             {
                 fps_info_->EndFrame(frame_number);
@@ -177,6 +184,49 @@ void Application::Run()
             }
         }
     }
+}
+
+
+void Application::Run(uint32_t loop_count, uint32_t max_loops) {
+
+    
+     running_              = true;
+    uint32_t current_loop = 0;
+
+    auto single_frame_number = file_processor_->GetCurrentFrameNumber() ;
+    while (current_loop < loop_count)
+    {
+        ProcessEvents(paused_);
+
+        if (!paused_)
+        {
+            
+                // 保存当前帧号
+            uint32_t start_frame_number = file_processor_->GetCurrentFrameNumber();
+
+              GFXRECON_WRITE_CONSOLE("Star Frame Numbers :%d", start_frame_number);
+            
+
+            GFXRECON_WRITE_CONSOLE("Play Single Frame Times :%d", current_loop)
+
+            
+            PlaySingleFrame();
+            Sleep(500);
+
+            // 获取播放后的帧号
+            uint32_t end_frame_number = file_processor_->GetCurrentFrameNumber();
+            GFXRECON_WRITE_CONSOLE("End Frame Numbers :%d", end_frame_number);
+
+             if (end_frame_number > start_frame_number)
+            {
+                current_loop++;
+            }
+
+            // 增加循环计数
+            current_loop++;
+        }
+    }
+
 }
 
 void Application::SetPaused(bool paused)
