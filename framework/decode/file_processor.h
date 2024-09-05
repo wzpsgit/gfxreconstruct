@@ -78,6 +78,8 @@ class FileProcessor
 
     bool Initialize(const std::string& filename);
 
+    bool Reset();
+
     // Returns true if there are more frames to process, false if all frames have been processed or an error has
     // occurred.  Use GetErrorState() to determine error condition.
     bool ProcessNextFrame();

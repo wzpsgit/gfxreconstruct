@@ -104,6 +104,25 @@ bool FileProcessor::Initialize(const std::string& filename)
     return success;
 }
 
+bool FileProcessor::Reset()
+{
+    size_t option_data_size = file_header_.num_options * sizeof(format::FileOptionPair);
+    size_t offset = sizeof(file_header_) + option_data_size;
+    bool success = util::platform::FileSeek(file_descriptor_, offset, util::platform::FileSeekSet);
+    if (success)
+    {
+        current_frame_number_ = kFirstFrame;
+        bytes_read_ = offset;
+        block_index_ = 0;
+        api_call_index_ = 0;
+        capture_uses_frame_markers_ = false;
+        first_frame_ = kFirstFrame + 1;
+        return true;
+    }
+    else
+        return false;
+}
+
 bool FileProcessor::ProcessNextFrame()
 {
     bool success = IsFileValid();

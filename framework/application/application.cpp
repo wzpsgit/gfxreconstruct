@@ -153,7 +153,7 @@ void Application::Run()
 
             // PlaySingleFrame() increments this->current_frame_number_ *if* there's an end-of-frame
             PlaySingleFrame();
-
+         
             if (fps_info_ != nullptr)
             {
                 fps_info_->EndFrame(frame_number);
@@ -164,6 +164,22 @@ void Application::Run()
                 }
             }
         }
+    }
+}
+
+
+void Application::Run(int loop_count) {
+
+    while (loop_count > 0)
+    {
+        this->Run();
+        // Reset file processor for next replay
+        if (!file_processor_->Reset())
+        {
+            GFXRECON_LOG_ERROR("Fail to reset file processor.");
+            break;
+        }
+        --loop_count;
     }
 }
 

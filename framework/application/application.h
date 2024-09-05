@@ -63,6 +63,9 @@ class Application final
     bool IsRunning() const { return running_; }
 
     void Run();
+    
+    //Loop running replays
+    void Run(int loop_count);
 
     bool GetPaused() const { return paused_; }
 
