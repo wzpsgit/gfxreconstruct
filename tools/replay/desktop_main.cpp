@@ -127,10 +127,7 @@ int main(int argc, const char** argv)
     gfxrecon::util::ArgumentParser arg_parser(argc, argv, kOptions, kArguments);
 
 
-    //for (const auto& argInfo : arg_parser.GetArgumentsIndices())
-    //{
-    //    GFXRECON_WRITE_CONSOLE(argInfo.first.c_str());
-    //
+
 
     if (arg_parser.IsArgumentSet("--replay-count"))
     {
@@ -139,9 +136,6 @@ int main(int argc, const char** argv)
         replay_count = std::stoi(arg_parser.GetArgumentValue("--replay-count"));
     }
   
-
-  
-
   
     if (CheckOptionPrintVersion(argv[0], arg_parser) || CheckOptionPrintUsage(argv[0], arg_parser))
     {
@@ -318,12 +312,16 @@ int main(int argc, const char** argv)
 
             application->SetPauseFrame(GetPauseFrame(arg_parser));
             application->SetFpsInfo(&fps_info);
-            //application->Run();
+          
 
 
             if (replay_count != default_val)
             {
-                application->Run(replay_count);
+               
+                for (int i = 0; i < replay_count; i++)
+                {
+                    application->Run();
+                }
             }
             else
             {
