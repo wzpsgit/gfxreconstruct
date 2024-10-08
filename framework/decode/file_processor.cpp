@@ -145,6 +145,50 @@ bool FileProcessor::ProcessAllFrames()
     return (error_state_ == kErrorNone);
 }
 
+void FileProcessor::Reset() {
+
+            if (file_descriptor_ != nullptr)
+    {
+       
+        fclose(file_descriptor_);
+        int32_t result = util::platform::FileOpen(&file_descriptor_, filename_.c_str(), "rb");
+        if ((result != 0) || (file_descriptor_ == nullptr))
+        {
+            GFXRECON_LOG_ERROR("Failed to reopen file %s for reset.", filename_.c_str());
+            error_state_ = kErrorOpeningFile;
+        }
+        else
+        {
+            // 重新初始化文件头和其他状态
+            bool success = ProcessFileHeader();
+            if (!success)
+            {
+                fclose(file_descriptor_);
+                file_descriptor_ = nullptr;
+                GFXRECON_LOG_ERROR("Failed to process file header on reset.");
+                error_state_ = kErrorReadingFileHeader;
+            }
+            else
+            {
+                // 重置其他状态变量
+                current_frame_number_       = 0;
+                bytes_read_                 = 0;
+                block_index_                = 0;
+                api_call_index_             = 0;
+                capture_uses_frame_markers_ = false;
+                first_frame_                = 0;
+                error_state_                = kErrorNone;
+            }
+        }
+    }
+    else
+    {
+        GFXRECON_LOG_ERROR("No file is currently open to reset.");
+    }
+}
+
+
+
 bool FileProcessor::ContinueDecoding()
 {
     bool early_exit = false;

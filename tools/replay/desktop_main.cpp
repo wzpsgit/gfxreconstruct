@@ -314,12 +314,17 @@ int main(int argc, const char** argv)
             application->SetFpsInfo(&fps_info);
           
 
-
+            //reset info 
             if (replay_count != default_val)
             {
                
                 for (int i = 0; i < replay_count; i++)
                 {
+                    fps_info.ResetForNextReplay();
+                    file_processor->Reset();
+                    fps_info.BeginFile();
+
+                    application->SetFpsInfo(&fps_info);
                     application->Run();
                 }
             }

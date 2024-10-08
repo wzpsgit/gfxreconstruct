@@ -56,6 +56,7 @@ class FpsInfo
     void                   EndFile(uint64_t end_file_processor_frame);
     void                   ProcessStateEndMarker(uint64_t file_processor_frame);
     [[nodiscard]] uint64_t ShouldPreloadFrames(uint64_t current_frame) const;
+    void                   ResetForNextReplay();
 
   private:
     uint64_t start_time_;

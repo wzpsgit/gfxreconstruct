@@ -113,6 +113,7 @@ class FileProcessor
         block_index_to_          = block_index_to;
     }
 
+    void Reset();
   protected:
     bool ContinueDecoding();
 
