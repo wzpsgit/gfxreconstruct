@@ -312,27 +312,9 @@ int main(int argc, const char** argv)
 
             application->SetPauseFrame(GetPauseFrame(arg_parser));
             application->SetFpsInfo(&fps_info);
-          
-
-            //reset info 
-            if (replay_count != default_val)
-            {
-               
-                for (int i = 0; i < replay_count; i++)
-                {
-                    fps_info.ResetForNextReplay();
-                    file_processor->Reset();
-                    fps_info.BeginFile();
-
-                    application->SetFpsInfo(&fps_info);
-                    application->Run();
-                }
-            }
-            else
-            {
-                application->Run();
-            }
-
+         
+            application->Run(replay_count);
+           
             // XXX if the final frame ended with a Present, this would be the *next* frame
             // Add one so that it matches the trim range frame number semantic
             fps_info.EndFile(file_processor->GetCurrentFrameNumber() + 1);
