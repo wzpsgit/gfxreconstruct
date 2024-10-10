@@ -320,6 +320,7 @@ void Application::Run(int loop_count)
         if (!file_processor_->Reset())
         {
             GFXRECON_LOG_ERROR("Fail to reset file processor.");
+            break;
         }
         --loop_count;
     }
