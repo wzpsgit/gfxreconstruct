@@ -28,6 +28,7 @@
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #include "application/win32_context.h"
+#include"Windows.h"
 #endif
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #include "application/wayland_context.h"
@@ -128,7 +129,7 @@ void Application::SetFpsInfo(graphics::FpsInfo* fps_info)
 void Application::Run()
 {
     running_ = true;
-
+    //int current_loop = 1;
     while (running_)
     {
         ProcessEvents(paused_);
@@ -163,9 +164,8 @@ void Application::Run()
                 fps_info_->BeginFrame(frame_number);
             }
 
-            // PlaySingleFrame() increments this->current_frame_number_ *if* there's an end-of-frame
             PlaySingleFrame();
-
+     
             if (fps_info_ != nullptr)
             {
                 fps_info_->EndFrame(frame_number);
@@ -178,6 +178,7 @@ void Application::Run()
         }
     }
 }
+
 
 void Application::SetPaused(bool paused)
 {
@@ -307,6 +308,21 @@ void Application::InitializeWsiContext(const char* pSurfaceExtensionName, void* 
         {
             // NOOP :
         }
+    }
+}
+
+void Application::Run(int loop_count) 
+{
+    while (loop_count > 0)
+    {
+        this->Run();
+        // Reset file processor for next replay
+        if (!file_processor_->Reset())
+        {
+            GFXRECON_LOG_ERROR("Fail to reset file processor.");
+            break;
+        }
+        --loop_count;
     }
 }
 

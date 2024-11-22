@@ -243,5 +243,20 @@ uint64_t FpsInfo::ShouldPreloadFrames(uint64_t current_frame) const
     return result;
 }
 
+
+void FpsInfo::ResetForNextReplay()
+{
+    //reset measurement state
+    measurement_start_time_ = 0;
+    measurement_end_time_   = 0;
+    started_measurement_    = false;
+    ended_measurement_      = false;
+    frame_durations_.clear();
+
+    // 重置其他与回放相关的状态
+    replay_start_frame_ = 1;
+    replay_start_time_  = 0;
+}
+
 GFXRECON_END_NAMESPACE(graphics)
 GFXRECON_END_NAMESPACE(gfxrecon)
