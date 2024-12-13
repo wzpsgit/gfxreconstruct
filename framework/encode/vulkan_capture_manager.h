@@ -59,7 +59,15 @@ class VulkanCaptureManager : public ApiCaptureManager
 {
   public:
     static VulkanCaptureManager* Get() { return singleton_; }
+    
+    std::map<VkCommandBuffer, int64_t> command_call;
+    std::atomic<int64_t> frame_number        = 0;
+    std::atomic<int64_t> capture_image_count = 0;
+    std::atomic<int64_t> image_index         = 0;
+    std::atomic<int64_t> total_draw_number   = 0;
+    std::atomic<bool>    capture = false;
 
+    std::string TimeStamp();
     // Creates the capture manager instance if none exists, or increments a reference count if an instance already
     // exists.
     static bool CreateInstance();

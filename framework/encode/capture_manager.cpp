@@ -44,6 +44,8 @@
 #include <cstdlib>
 #include <unordered_map>
 
+#include "vulkan_capture_manager.h"
+
 #if defined(__unix__)
 extern char** environ;
 #endif
@@ -65,6 +67,8 @@ thread_local std::unique_ptr<CommonCaptureManager::ThreadData> CommonCaptureMana
 CommonCaptureManager::ApiCallMutexT                            CommonCaptureManager::api_call_mutex_;
 
 std::atomic<format::HandleId> CommonCaptureManager::unique_id_counter_{ format::kNullHandleId };
+
+std::string CommonCaptureManager::capture_filename_ = "";
 
 CommonCaptureManager::ThreadData::ThreadData() :
     thread_id_(GetThreadId()), object_id_(format::kNullHandleId), call_id_(format::ApiCallId::ApiCall_Unknown),

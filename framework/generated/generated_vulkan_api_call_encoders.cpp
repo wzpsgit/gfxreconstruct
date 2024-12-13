@@ -29,6 +29,9 @@
 
 #include "generated/generated_vulkan_api_call_encoders.h"
 
+#include <sstream>
+#include <nlohmann/json.hpp>
+
 #include "encode/custom_vulkan_encoder_commands.h"
 #include "encode/custom_vulkan_array_size_2d.h"
 #include "encode/parameter_encoder.h"
@@ -40,6 +43,7 @@
 #include "generated/generated_vulkan_command_buffer_util.h"
 #include "generated/generated_vulkan_struct_handle_wrappers.h"
 #include "util/defines.h"
+#include "util/json_util.h"
 
 #include "vulkan/vulkan.h"
 #include "vk_video/vulkan_video_codec_h264std.h"
@@ -520,6 +524,38 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(
 {
     VulkanCaptureManager* manager = VulkanCaptureManager::Get();
     GFXRECON_ASSERT(manager != nullptr);
+
+    int64_t total_draw_calls = 0;
+    std::stringstream ss;
+    bool valid_command = false;
+    static int all =0;
+    for (uint32_t i = 0; i < submitCount; ++i)
+    {
+        const VkSubmitInfo& submit_info = pSubmits[i];
+        for (uint32_t j = 0; j < submit_info.commandBufferCount; ++j)
+        {
+            VkCommandBuffer cmd_buffer = submit_info.pCommandBuffers[j];
+            auto iter = manager->command_call.find(cmd_buffer);
+            if (iter != manager->command_call.end() && iter->second)
+            {
+                valid_command = true;
+                total_draw_calls += iter->second;
+                ss << " CommandBuffer: " << cmd_buffer << " Draw call number: " << iter->second << std::endl;
+            }
+
+        }
+
+        if (total_draw_calls)
+        {
+        }
+    }
+    
+    if (total_draw_calls && valid_command)
+    {
+        manager->total_draw_number += total_draw_calls;
+        all+=total_draw_calls;
+    }
+    
     auto force_command_serialization = manager->GetForceCommandSerialization();
     std::shared_lock<CommonCaptureManager::ApiCallMutexT> shared_api_call_lock;
     std::unique_lock<CommonCaptureManager::ApiCallMutexT> exclusive_api_call_lock;
@@ -542,6 +578,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueueSubmit(
     auto encoder = manager->BeginApiCallCapture(format::ApiCallId::ApiCall_vkQueueSubmit);
     if (encoder)
     {
+        manager->capture = true;
         encoder->EncodeVulkanHandleValue<vulkan_wrappers::QueueWrapper>(queue);
         encoder->EncodeUInt32Value(submitCount);
         EncodeStructArray(encoder, pSubmits, submitCount);
@@ -3581,7 +3618,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetCommandBuffer(
     CustomEncoderPreCall<format::ApiCallId::ApiCall_vkResetCommandBuffer>::Dispatch(manager, commandBuffer, flags);
 
     VkResult result = vulkan_wrappers::GetDeviceTable(commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
-
+    manager->command_call[commandBuffer] = 0;
     auto encoder = manager->BeginTrackedApiCallCapture(format::ApiCallId::ApiCall_vkResetCommandBuffer);
     if (encoder)
     {
@@ -4078,6 +4115,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(
 {
     VulkanCaptureManager* manager = VulkanCaptureManager::Get();
     GFXRECON_ASSERT(manager != nullptr);
+    manager->command_call[commandBuffer]++;
     auto force_command_serialization = manager->GetForceCommandSerialization();
     std::shared_lock<CommonCaptureManager::ApiCallMutexT> shared_api_call_lock;
     std::unique_lock<CommonCaptureManager::ApiCallMutexT> exclusive_api_call_lock;
@@ -4118,6 +4156,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(
 {
     VulkanCaptureManager* manager = VulkanCaptureManager::Get();
     GFXRECON_ASSERT(manager != nullptr);
+    manager->command_call[commandBuffer]++;
     auto force_command_serialization = manager->GetForceCommandSerialization();
     std::shared_lock<CommonCaptureManager::ApiCallMutexT> shared_api_call_lock;
     std::unique_lock<CommonCaptureManager::ApiCallMutexT> exclusive_api_call_lock;
@@ -4182,7 +4221,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndirect(
         encoder->EncodeUInt32Value(stride);
         manager->EndCommandApiCallCapture(commandBuffer, TrackCmdDrawIndirectHandles, buffer);
     }
-
+    manager->command_call[commandBuffer] += drawCount;
     vulkan_wrappers::GetDeviceTable(commandBuffer)->CmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
 
     CustomEncoderPostCall<format::ApiCallId::ApiCall_vkCmdDrawIndirect>::Dispatch(manager, commandBuffer, buffer, offset, drawCount, stride);
@@ -4221,7 +4260,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexedIndirect(
         encoder->EncodeUInt32Value(stride);
         manager->EndCommandApiCallCapture(commandBuffer, TrackCmdDrawIndexedIndirectHandles, buffer);
     }
-
+    manager->command_call[commandBuffer] += drawCount;
     vulkan_wrappers::GetDeviceTable(commandBuffer)->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
 
     CustomEncoderPostCall<format::ApiCallId::ApiCall_vkCmdDrawIndexedIndirect>::Dispatch(manager, commandBuffer, buffer, offset, drawCount, stride);
@@ -5293,7 +5332,23 @@ VKAPI_ATTR void VKAPI_CALL CmdExecuteCommands(
     }
 
     vulkan_wrappers::GetDeviceTable(commandBuffer)->CmdExecuteCommands(commandBuffer, commandBufferCount, pCommandBuffers);
-
+    
+    int64_t total_draw_calls = 0;
+    for (uint32_t i = 0; i < commandBufferCount; ++i)
+    {
+        VkCommandBuffer cmd_buffer = pCommandBuffers[i];
+        auto iter = manager->command_call.find(cmd_buffer);
+        if (iter != manager->command_call.end() && iter->second)
+        {
+            total_draw_calls += iter->second;
+        }
+    }
+    
+    if (total_draw_calls)
+    {
+        //manager->log_file_ << "CmdExecuteCommands Total draw call number: " << total_draw_calls << " commandBufferCount: " << commandBufferCount << std::endl;
+        //GFXRECON_LOG_INFO("CmdExecuteCommands Total draw call number: %u, commandBufferCount:  %u", total_draw_calls, commandBufferCount);
+    }
     CustomEncoderPostCall<format::ApiCallId::ApiCall_vkCmdExecuteCommands>::Dispatch(manager, commandBuffer, commandBufferCount, pCommandBuffers);
 }
 
@@ -8519,6 +8574,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(
     CustomEncoderPreCall<format::ApiCallId::ApiCall_vkGetSwapchainImagesKHR>::Dispatch(manager, device, swapchain, pSwapchainImageCount, pSwapchainImages);
 
     VkResult result = vulkan_wrappers::GetDeviceTable(device)->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+    manager->capture_image_count = *pSwapchainImageCount;
 
     if (result >= 0)
     {
@@ -8576,7 +8632,7 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(
     {
         omit_output_data = true;
     }
-
+    manager->image_index = *pImageIndex;
     auto encoder = manager->BeginApiCallCapture(format::ApiCallId::ApiCall_vkAcquireNextImageKHR);
     if (encoder)
     {
@@ -8601,6 +8657,60 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(
 {
     VulkanCaptureManager* manager = VulkanCaptureManager::Get();
     GFXRECON_ASSERT(manager != nullptr);
+    if(manager->total_draw_number && manager->capture)
+    {
+        std::string file_part;
+        size_t      sep_index = CommonCaptureManager::capture_filename_.rfind('.');
+        if (sep_index != std::string::npos)
+        {
+            file_part = CommonCaptureManager::capture_filename_.substr(0, sep_index);
+            CommonCaptureManager::capture_filename_ = file_part + ".json";
+        }
+
+        nlohmann::json file_content =
+        {
+            { "swap_chain_image_count", manager->capture_image_count.load() },
+            { "image_index",            manager->image_index.load() },
+            { "effective_draw_number",  manager->total_draw_number.load() },
+        };
+
+        FILE*   file_pointer = nullptr;
+        int32_t result       = util::platform::FileOpen(&file_pointer, CommonCaptureManager::capture_filename_.c_str(), "w");
+        const std::string json_string = file_content.dump(util::kJsonIndentWidth);
+        if (result == 0)
+        {
+            if (!util::platform::FileWrite(json_string.data(), json_string.size(), file_pointer))
+            {
+                GFXRECON_LOG_ERROR("Failed to write to measurements file '%s'.", CommonCaptureManager::capture_filename_.c_str());
+                const int remove_result = std::remove(CommonCaptureManager::capture_filename_.c_str());
+                if (remove_result != 0)
+                {
+                    GFXRECON_LOG_ERROR("Failed to remove measurements file '%s' (Error %i).",
+                                       CommonCaptureManager::capture_filename_.c_str(),
+                                       remove_result);
+                }
+            }
+            util::platform::FileClose(file_pointer);
+        }
+        else
+        {
+            GFXRECON_LOG_ERROR("Failed to open measurements file '%s' (Error %i).", CommonCaptureManager::capture_filename_.c_str(), result);
+            GFXRECON_LOG_ERROR("%s", std::strerror(result));
+        }
+        
+        // std::ofstream log_file(CommonCaptureManager::capture_filename_);
+        // log_file << "swap_chain_image_count: " << manager->capture_image_count << " image_index: " << manager->image_index  << " effective_draw_number: " << manager->total_draw_number <<std::endl;
+        // log_file.close();
+    }
+    manager->capture = false;
+    manager->total_draw_number = 0;
+    
+    // for (auto& pair : manager->command_call)
+    // {
+    //     manager->log_file_ << "  manager->command: " << pair.first << "  " << pair.second << std::endl;
+    // }
+    manager->command_call.clear();
+    
     auto force_command_serialization = manager->GetForceCommandSerialization();
     std::shared_lock<CommonCaptureManager::ApiCallMutexT> shared_api_call_lock;
     std::unique_lock<CommonCaptureManager::ApiCallMutexT> exclusive_api_call_lock;

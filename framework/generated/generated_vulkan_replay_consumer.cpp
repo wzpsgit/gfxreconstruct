@@ -1451,7 +1451,7 @@ void VulkanReplayConsumer::Process_vkResetCommandBuffer(
     VkCommandBufferResetFlags                   flags)
 {
     auto in_commandBuffer = GetObjectInfoTable().GetVkCommandBufferInfo(commandBuffer);
-
+    
     VkResult replay_result = OverrideResetCommandBuffer(GetDeviceTable(in_commandBuffer->handle)->ResetCommandBuffer, returnValue, in_commandBuffer, flags);
     CheckResult("vkResetCommandBuffer", returnValue, replay_result, call_info);
 }
@@ -1692,7 +1692,13 @@ void VulkanReplayConsumer::Process_vkCmdDraw(
     uint32_t                                    firstInstance)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<VulkanCommandBufferInfo>(commandBuffer, &CommonObjectInfoTable::GetVkCommandBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer]++;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDraw(in_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
     if (options_.dumping_resources)
@@ -1711,6 +1717,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndexed(
     uint32_t                                    firstInstance)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<VulkanCommandBufferInfo>(commandBuffer, &CommonObjectInfoTable::GetVkCommandBufferInfo);
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer]++;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
 
     GetDeviceTable(in_commandBuffer)->CmdDrawIndexed(in_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 
@@ -1730,7 +1743,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndirect(
 {
     VkCommandBuffer in_commandBuffer = MapHandle<VulkanCommandBufferInfo>(commandBuffer, &CommonObjectInfoTable::GetVkCommandBufferInfo);
     VkBuffer in_buffer = MapHandle<VulkanBufferInfo>(buffer, &CommonObjectInfoTable::GetVkBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += drawCount;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDrawIndirect(in_commandBuffer, in_buffer, offset, drawCount, stride);
 
     if (options_.dumping_resources)
@@ -1749,7 +1768,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndexedIndirect(
 {
     VkCommandBuffer in_commandBuffer = MapHandle<VulkanCommandBufferInfo>(commandBuffer, &CommonObjectInfoTable::GetVkCommandBufferInfo);
     VkBuffer in_buffer = MapHandle<VulkanBufferInfo>(buffer, &CommonObjectInfoTable::GetVkBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += drawCount;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDrawIndexedIndirect(in_commandBuffer, in_buffer, offset, drawCount, stride);
 
     if (options_.dumping_resources)
@@ -2291,9 +2316,28 @@ void VulkanReplayConsumer::Process_vkCmdExecuteCommands(
 {
     VkCommandBuffer in_commandBuffer = MapHandle<VulkanCommandBufferInfo>(commandBuffer, &CommonObjectInfoTable::GetVkCommandBufferInfo);
     const VkCommandBuffer* in_pCommandBuffers = MapHandles<VulkanCommandBufferInfo>(pCommandBuffers, commandBufferCount, &CommonObjectInfoTable::GetVkCommandBufferInfo);
-
+  
     GetDeviceTable(in_commandBuffer)->CmdExecuteCommands(in_commandBuffer, commandBufferCount, in_pCommandBuffers);
-
+    int64_t total_draw_calls = 0;
+    for (uint32_t i = 0; i < commandBufferCount; ++i)
+    {
+        VkCommandBuffer cmd_buffer = in_pCommandBuffers[i];
+        auto iter = graphics::FpsInfo::command_call.find(cmd_buffer);
+        if (iter != graphics::FpsInfo::command_call.end() && iter->second)
+        {
+            
+            total_draw_calls += iter->second;
+        }
+    }
+    
+    if (total_draw_calls)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += total_draw_calls;
+        graphics::FpsInfo::draw_call_number += total_draw_calls;
+        //std::thread::id threadId = std::this_thread::get_id();
+        //GFXRECON_LOG_INFO("vkCmdExecuteCommands Total draw call number: %u, commandBufferCount: %u, threadId: %u", total_draw_calls, commandBufferCount, threadId);
+    }
+    
     if (options_.dumping_resources)
     {
         resource_dumper_->Process_vkCmdExecuteCommands(call_info, GetDeviceTable(in_commandBuffer)->CmdExecuteCommands, in_commandBuffer, commandBufferCount, in_pCommandBuffers);
@@ -3676,7 +3720,7 @@ void VulkanReplayConsumer::Process_vkGetSwapchainImagesKHR(
     if (!pSwapchainImages->IsNull()) { pSwapchainImages->SetHandleLength(*pSwapchainImageCount->GetOutputPointer()); }
     std::vector<VulkanImageInfo> handle_info(*pSwapchainImageCount->GetOutputPointer());
     for (size_t i = 0; i < *pSwapchainImageCount->GetOutputPointer(); ++i) { pSwapchainImages->SetConsumerData(i, &handle_info[i]); }
-
+    
     VkResult replay_result = OverrideGetSwapchainImagesKHR(GetDeviceTable(in_device->handle)->GetSwapchainImagesKHR, returnValue, in_device, in_swapchain, pSwapchainImageCount, pSwapchainImages);
     CheckResult("vkGetSwapchainImagesKHR", returnValue, replay_result, call_info);
 

@@ -57,6 +57,8 @@ class CommonCaptureManager
   public:
     typedef std::shared_mutex ApiCallMutexT;
 
+    static std::string capture_filename_;
+
     static format::HandleId GetUniqueId() { return ++unique_id_counter_; }
 
     static auto AcquireSharedApiCallLock() { return std::move(std::shared_lock<ApiCallMutexT>(api_call_mutex_)); }
@@ -376,7 +378,6 @@ class CommonCaptureManager
     std::unique_ptr<util::FileOutputStream> asset_file_stream_;
     format::EnabledOptions                  file_options_;
     std::string                             base_filename_;
-    std::string                             capture_filename_;
     std::string                             asset_file_name_;
     bool                                    timestamp_filename_;
     bool                                    force_file_flush_;

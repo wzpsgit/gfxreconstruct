@@ -206,7 +206,7 @@ int main(int argc, const char** argv)
             {
                 GetMeasurementFilename(arg_parser, measurement_file_name);
             }
-
+            GFXRECON_LOG_INFO("%s(): measurement_file_name \"%s\"", __func__, measurement_file_name.c_str())
             gfxrecon::graphics::FpsInfo fps_info(static_cast<uint64_t>(start_frame),
                                                  static_cast<uint64_t>(end_frame),
                                                  has_mfr,
@@ -299,6 +299,7 @@ int main(int argc, const char** argv)
             application->SetPauseFrame(GetPauseFrame(arg_parser));
             application->SetFpsInfo(&fps_info);
             application->Run();
+       
 
             // XXX if the final frame ended with a Present, this would be the *next* frame
             // Add one so that it matches the trim range frame number semantic
