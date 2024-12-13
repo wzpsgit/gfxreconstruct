@@ -53,6 +53,7 @@
 #include "generated/generated_vulkan_enum_to_string.h"
 #include "util/to_string.h"
 #include "vulkan/vulkan_core.h"
+#include "encode/vulkan_capture_manager.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -3380,6 +3381,31 @@ VkResult VulkanReplayConsumerBase::OverrideQueueSubmit(PFN_vkQueueSubmit func,
     if (fence_info != nullptr)
     {
         fence = fence_info->handle;
+    }
+
+    bool next_line = true;
+    //for (uint32_t i = 0; i < submitCount; ++i)
+    {
+        const VkSubmitInfo& submit_info = submit_infos[0];
+        for (uint32_t j = 0; j < submit_info.commandBufferCount; ++j)
+        {
+            VkCommandBuffer cmd_buffer = submit_info.pCommandBuffers[j];
+            auto& iter = graphics::FpsInfo::command_call.find(cmd_buffer);
+            if (iter != graphics::FpsInfo::command_call.end() && iter->second)
+            {
+                //if (graphics::FpsInfo::submitCount[iter->first] == 0)
+                {
+                    graphics::FpsInfo::effective_draw_call += iter->second;
+                }
+                if (next_line)
+                {
+                    GFXRECON_LOG_INFO(" ");
+                    next_line = false;
+                }
+                graphics::FpsInfo::submitCount[iter->first]++;
+                GFXRECON_LOG_INFO("  OverrideQueueSubmit CommandBuffer: %p, draw call number: %u", cmd_buffer, iter->second);
+            }
+        }
     }
 
     // Only attempt to filter imported semaphores if we know at least one has been imported.
@@ -7953,7 +7979,7 @@ VkResult VulkanReplayConsumerBase::OverrideResetCommandBuffer(PFN_vkResetCommand
     ClearCommandBufferInfo(command_buffer_info);
 
     VkCommandBuffer command_buffer = command_buffer_info->handle;
-
+    graphics::FpsInfo::command_call[command_buffer] = 0;
     if (options_.dumping_resources)
     {
         resource_dumper.ResetCommandBuffer((command_buffer));

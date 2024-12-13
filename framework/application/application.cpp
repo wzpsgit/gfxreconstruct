@@ -204,6 +204,10 @@ bool Application::PlaySingleFrame()
 
         if (success)
         {
+            if (gfxrecon::graphics::FpsInfo::draw_call_number.load())
+            {
+                GFXRECON_LOG_INFO("PlaySingleFrame Draw call number: %u", gfxrecon::graphics::FpsInfo::draw_call_number.load() );
+            }
             if (file_processor_->GetCurrentFrameNumber() == pause_frame_)
             {
                 paused_ = true;

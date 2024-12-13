@@ -221,6 +221,7 @@ int main(int argc, const char** argv)
                 GetMeasurementFilename(arg_parser, measurement_file_name);
             }
 
+            GFXRECON_LOG_INFO("%s(): measurement_file_name \"%s\"", __func__, measurement_file_name.c_str())
             gfxrecon::graphics::FpsInfo fps_info(static_cast<uint64_t>(start_frame),
                                                  static_cast<uint64_t>(end_frame),
                                                  has_mfr,

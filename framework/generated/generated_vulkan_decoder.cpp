@@ -46,6 +46,7 @@
 #include "vk_video/vulkan_video_codec_h265std_decode.h"
 #include "vk_video/vulkan_video_codec_h265std_encode.h"
 #include "vk_video/vulkan_video_codecs_common.h"
+#include "graphics/fps_info.h"
 
 #include <cstddef>
 
@@ -2264,10 +2265,14 @@ size_t VulkanDecoder::Decode_vkCmdDraw(const ApiCallInfo& call_info, const uint8
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &firstVertex);
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &firstInstance);
 
+    graphics::FpsInfo::valid_draw_call = true;
+    graphics::FpsInfo::consumer_number = 0;
     for (auto consumer : GetConsumers())
     {
         consumer->Process_vkCmdDraw(call_info, commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
     }
+    graphics::FpsInfo::consumer_number = 0;
+    graphics::FpsInfo::draw_call_number++;
 
     return bytes_read;
 }
@@ -2290,10 +2295,14 @@ size_t VulkanDecoder::Decode_vkCmdDrawIndexed(const ApiCallInfo& call_info, cons
     bytes_read += ValueDecoder::DecodeInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &vertexOffset);
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &firstInstance);
 
+    graphics::FpsInfo::valid_draw_call = true;
+    graphics::FpsInfo::consumer_number = 0;
     for (auto consumer : GetConsumers())
     {
         consumer->Process_vkCmdDrawIndexed(call_info, commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
+    graphics::FpsInfo::consumer_number = 0;
+    graphics::FpsInfo::draw_call_number++;
 
     return bytes_read;
 }
@@ -2314,10 +2323,14 @@ size_t VulkanDecoder::Decode_vkCmdDrawIndirect(const ApiCallInfo& call_info, con
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &drawCount);
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &stride);
 
+    graphics::FpsInfo::valid_draw_call = true;
+    graphics::FpsInfo::consumer_number = 0;
     for (auto consumer : GetConsumers())
     {
         consumer->Process_vkCmdDrawIndirect(call_info, commandBuffer, buffer, offset, drawCount, stride);
     }
+    graphics::FpsInfo::consumer_number = 0;
+    graphics::FpsInfo::draw_call_number += drawCount;
 
     return bytes_read;
 }
@@ -2338,10 +2351,14 @@ size_t VulkanDecoder::Decode_vkCmdDrawIndexedIndirect(const ApiCallInfo& call_in
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &drawCount);
     bytes_read += ValueDecoder::DecodeUInt32Value((parameter_buffer + bytes_read), (buffer_size - bytes_read), &stride);
 
+    graphics::FpsInfo::valid_draw_call = true;
+    graphics::FpsInfo::consumer_number = 0;
     for (auto consumer : GetConsumers())
     {
         consumer->Process_vkCmdDrawIndexedIndirect(call_info, commandBuffer, buffer, offset, drawCount, stride);
     }
+    graphics::FpsInfo::consumer_number = 0;
+    graphics::FpsInfo::draw_call_number += drawCount;
 
     return bytes_read;
 }
@@ -4793,6 +4810,8 @@ size_t VulkanDecoder::Decode_vkQueuePresentKHR(const ApiCallInfo& call_info, con
         consumer->Process_vkQueuePresentKHR(call_info, return_value, queue, &pPresentInfo);
     }
 
+    GFXRECON_LOG_INFO(" ------------QueuePresentKHR------------ effective_draw_call %u", graphics::FpsInfo::effective_draw_call.load());
+    graphics::FpsInfo::command_call.clear();
     return bytes_read;
 }
 

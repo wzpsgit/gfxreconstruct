@@ -27,6 +27,7 @@
 #include "util/defines.h"
 #include "decode/file_processor.h"
 
+#include <map>
 #include <limits>
 #include <string_view>
 
@@ -84,6 +85,14 @@ class FpsInfo
     std::string measurement_file_name_;
 
     bool preload_measurement_range_;
+
+public:
+    static std::map<VkCommandBuffer, int64_t> command_call;
+    static std::atomic<int64_t>               draw_call_number;
+    static std::atomic<int64_t>               effective_draw_call;
+    static std::atomic<int64_t>               consumer_number;
+    static std::atomic<bool>                  valid_draw_call;
+    static std::map<VkCommandBuffer, int64_t> submitCount;
 };
 
 GFXRECON_END_NAMESPACE(graphics)

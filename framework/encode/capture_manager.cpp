@@ -64,6 +64,8 @@ CommonCaptureManager::ApiCallMutexT                            CommonCaptureMana
 
 std::atomic<format::HandleId> CommonCaptureManager::unique_id_counter_{ format::kNullHandleId };
 
+std::string CommonCaptureManager::capture_filename = "";
+
 CommonCaptureManager::ThreadData::ThreadData() :
     thread_id_(GetThreadId()), object_id_(format::kNullHandleId), call_id_(format::ApiCallId::ApiCall_Unknown),
     block_index_(0)
@@ -921,7 +923,7 @@ bool CommonCaptureManager::CreateCaptureFile(format::ApiFamilyId api_family, con
 {
     bool        success          = true;
     std::string capture_filename = base_filename;
-
+    capture_filename = capture_filename;
     if (timestamp_filename_)
     {
         capture_filename = util::filepath::GenerateTimestampedFilename(capture_filename);
