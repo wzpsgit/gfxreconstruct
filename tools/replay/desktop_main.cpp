@@ -92,11 +92,23 @@ int main(int argc, const char** argv)
 {
     int return_code = 0;
 
+    const int default_val  = 1;
+    int replay_count = default_val;
+
     // Default initialize logging to report issues while loading settings.
     gfxrecon::util::Log::Init(gfxrecon::decode::kDefaultLogLevel);
 
     gfxrecon::util::ArgumentParser arg_parser(argc, argv, kOptions, kArguments);
 
+    if (arg_parser.IsArgumentSet("--replay-count"))
+    {
+
+        GFXRECON_WRITE_CONSOLE("add replay success");
+        replay_count = std::stoi(arg_parser.GetArgumentValue("--replay-count"));
+    }
+  
+
+  
     if (CheckOptionPrintVersion(argv[0], arg_parser) || CheckOptionPrintUsage(argv[0], arg_parser))
     {
         gfxrecon::util::Log::Release();
@@ -239,7 +251,7 @@ int main(int argc, const char** argv)
 
             application->SetPauseFrame(GetPauseFrame(arg_parser));
             application->SetFpsInfo(&fps_info);
-            application->Run();
+            application->Run(replay_count);
 
             // XXX if the final frame ended with a Present, this would be the *next* frame
             // Add one so that it matches the trim range frame number semantic
@@ -292,9 +304,18 @@ int main(int argc, const char** argv)
         return_code = -1;
     }
 
+    if (replay_count != default_val)
+    {
+        GFXRECON_WRITE_CONSOLE("Replay the single Frame times :%d", replay_count);
+    }
+
+
     WaitForExit();
 
     gfxrecon::util::Log::Release();
+
+
+
 
     return return_code;
 }

@@ -291,6 +291,21 @@ void Application::InitializeWsiContext(const char* pSurfaceExtensionName, void* 
     }
 }
 
+void Application::Run(int loop_count) 
+{
+    while (loop_count > 0)
+    {
+        this->Run();
+        // Reset file processor for next replay
+        if (!file_processor_->Reset())
+        {
+            GFXRECON_LOG_ERROR("Fail to reset file processor.");
+            break;
+        }
+        --loop_count;
+    }
+}
+
 #if defined(D3D12_SUPPORT)
 void Application::InitializeDx12WsiContext()
 {

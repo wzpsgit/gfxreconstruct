@@ -232,5 +232,7 @@ void FpsInfo::LogToConsole()
     }
 }
 
+
+
 GFXRECON_END_NAMESPACE(graphics)
 GFXRECON_END_NAMESPACE(gfxrecon)
