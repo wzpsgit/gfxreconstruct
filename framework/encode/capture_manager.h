@@ -54,6 +54,8 @@ class CaptureManager
   public:
     typedef std::shared_mutex ApiCallMutexT;
 
+    static std::string capture_filename_;
+
     static format::HandleId GetUniqueId() { return ++unique_id_counter_; }
 
     static auto AcquireSharedApiCallLock() { return std::move(std::shared_lock<ApiCallMutexT>(api_call_mutex_)); }

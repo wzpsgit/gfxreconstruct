@@ -40,6 +40,8 @@
 #include <cassert>
 #include <unordered_map>
 
+#include "vulkan_capture_manager.h"
+
 GFXRECON_BEGIN_NAMESPACE(gfxrecon)
 GFXRECON_BEGIN_NAMESPACE(encode)
 
@@ -59,6 +61,8 @@ std::atomic<uint64_t>                                    CaptureManager::block_i
 std::function<void()>                                    CaptureManager::delete_instance_func_ = nullptr;
 
 std::atomic<format::HandleId> CaptureManager::unique_id_counter_{ format::kNullHandleId };
+
+std::string CaptureManager::capture_filename_ = "";
 
 CaptureManager::ThreadData::ThreadData() :
     thread_id_(GetThreadId()), object_id_(format::kNullHandleId), call_id_(format::ApiCallId::ApiCall_Unknown),
@@ -841,7 +845,7 @@ bool CaptureManager::CreateCaptureFile(const std::string& base_filename)
 {
     bool        success          = true;
     std::string capture_filename = base_filename;
-
+    capture_filename_ = capture_filename;
     if (timestamp_filename_)
     {
         capture_filename = util::filepath::GenerateTimestampedFilename(capture_filename);

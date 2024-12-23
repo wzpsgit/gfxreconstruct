@@ -1605,7 +1605,13 @@ void VulkanReplayConsumer::Process_vkCmdDraw(
     uint32_t                                    firstInstance)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer]++;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDraw(in_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -1619,6 +1625,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndexed(
     uint32_t                                    firstInstance)
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer]++;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
 
     GetDeviceTable(in_commandBuffer)->CmdDrawIndexed(in_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
@@ -1633,7 +1646,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndirect(
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
     VkBuffer in_buffer = MapHandle<BufferInfo>(buffer, &VulkanObjectInfoTable::GetBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += drawCount;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDrawIndirect(in_commandBuffer, in_buffer, offset, drawCount, stride);
 }
 
@@ -1647,7 +1666,13 @@ void VulkanReplayConsumer::Process_vkCmdDrawIndexedIndirect(
 {
     VkCommandBuffer in_commandBuffer = MapHandle<CommandBufferInfo>(commandBuffer, &VulkanObjectInfoTable::GetCommandBufferInfo);
     VkBuffer in_buffer = MapHandle<BufferInfo>(buffer, &VulkanObjectInfoTable::GetBufferInfo);
-
+    if (graphics::FpsInfo::valid_draw_call)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += drawCount;
+        graphics::FpsInfo::valid_draw_call = false;
+        graphics::FpsInfo::consumer_number++;
+        graphics::FpsInfo::command_call[in_commandBuffer] /= graphics::FpsInfo::consumer_number;
+    }
     GetDeviceTable(in_commandBuffer)->CmdDrawIndexedIndirect(in_commandBuffer, in_buffer, offset, drawCount, stride);
 }
 
@@ -2056,6 +2081,23 @@ void VulkanReplayConsumer::Process_vkCmdExecuteCommands(
     const VkCommandBuffer* in_pCommandBuffers = MapHandles<CommandBufferInfo>(pCommandBuffers, commandBufferCount, &VulkanObjectInfoTable::GetCommandBufferInfo);
 
     GetDeviceTable(in_commandBuffer)->CmdExecuteCommands(in_commandBuffer, commandBufferCount, in_pCommandBuffers);
+    int64_t total_draw_calls = 0;
+    for (uint32_t i = 0; i < commandBufferCount; ++i)
+    {
+        VkCommandBuffer cmd_buffer = in_pCommandBuffers[i];
+        auto iter = graphics::FpsInfo::command_call.find(cmd_buffer);
+        if (iter != graphics::FpsInfo::command_call.end() && iter->second)
+        {
+
+            total_draw_calls += iter->second;
+        }
+    }
+
+    if (total_draw_calls)
+    {
+        graphics::FpsInfo::command_call[in_commandBuffer] += total_draw_calls;
+        graphics::FpsInfo::draw_call_number += total_draw_calls;
+    }
 }
 
 void VulkanReplayConsumer::Process_vkBindBufferMemory2(

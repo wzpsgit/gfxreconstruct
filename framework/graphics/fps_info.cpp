@@ -57,6 +57,13 @@ WriteFpsToConsole(const char* prefix, uint64_t start_frame, uint64_t end_frame, 
                            end_frame);
 }
 
+std::map<VkCommandBuffer, int64_t> FpsInfo::command_call;
+std::map<VkCommandBuffer, int64_t> FpsInfo::submitCount;
+std::atomic<int64_t> FpsInfo::draw_call_number    = 0;
+std::atomic<int64_t> FpsInfo::effective_draw_call = 0;
+std::atomic<int64_t> FpsInfo::consumer_number     = 0;
+std::atomic<bool>    FpsInfo::valid_draw_call     = false;
+
 FpsInfo::FpsInfo(uint64_t               measurement_start_frame,
                  uint64_t               measurement_end_frame,
                  bool                   has_measurement_range,
@@ -77,6 +84,8 @@ FpsInfo::FpsInfo(uint64_t               measurement_start_frame,
 
 void FpsInfo::BeginFile()
 {
+    effective_draw_call = 0;
+    draw_call_number = 0;
     replay_start_frame_ = 1;
     replay_start_time_ = start_time_ = util::datetime::GetTimestamp();
 }
@@ -94,6 +103,8 @@ bool FpsInfo::ShouldQuit(uint64_t frame)
 
 void FpsInfo::BeginFrame(uint64_t frame)
 {
+    effective_draw_call = 0;
+    draw_call_number = 0;
     if (!started_measurement_)
     {
         if (frame >= measurement_start_frame_)
@@ -136,8 +147,9 @@ void FpsInfo::EndFrame(uint64_t frame)
                                                     { "end_time_monotonic", end_time },
                                                     { "duration", diff_time },
                                                     { "fps", fps },
-                                                    { "frame_durations", frame_durations_ } } } };
-
+                                                    { "frame_durations", frame_durations_ },
+                                                    { "draw_call", draw_call_number.load() } ,
+                                                    { "effective_draw_call", effective_draw_call.load() }} } };
                 FILE*   file_pointer = nullptr;
                 int32_t result       = util::platform::FileOpen(&file_pointer, measurement_file_name_.c_str(), "w");
                 if (result == 0)
